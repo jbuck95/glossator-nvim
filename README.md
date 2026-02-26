@@ -71,7 +71,7 @@ https://github.com/user-attachments/assets/fc394ec8-2eda-439f-b789-f43a94973fc1
 ```lua
 -- ~/.config/nvim/lua/plugins/glossator-nvim.lua
 return {
-  "deinusername/glossator-nvim",
+  "jbuck95/glossator-nvim",
   ft = "markdown",
   config = function()
     require("glossator-nvim").setup({
