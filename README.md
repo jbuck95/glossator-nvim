@@ -30,7 +30,9 @@ will sync to match the texts line numbers.
 https://github.com/user-attachments/assets/ea84ff35-db27-47da-b4af-17c68362f8b7
 
 ## Editing-Toolbar
-https://github.com/user-attachments/assets/368badb1-84b2-4aa7-8ee6-726e37e1ccec
+
+<img width="634" height="56" alt="Image" src="https://github.com/user-attachments/assets/368badb1-84b2-4aa7-8ee6-726e37e1ccec" />
+
 Contextual float menu via visual select — formatting, wrapping and annotation.
 Highlight or annotate content and delete the marks. You will be asked
 to backup your file before deleting the marks. 
