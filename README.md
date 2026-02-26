@@ -17,7 +17,6 @@ way easier for me. Later on added stuff I thought was handy.
  Inline tags for colour, underline and numbered annotations. Invisible
  in the rendered text, stripable at the touch of a button.
 
-https://github.com/user-attachments/assets/fc394ec8-2eda-439f-b789-f43a94973fc1
 
 ## Synced Commenting-Pane
 
@@ -37,7 +36,11 @@ Contextual float menu via visual select — formatting, wrapping and annotation.
 Highlight or annotate content and delete the marks. You will be asked
 to backup your file before deleting the marks. 
 
+**Annotate:**
 https://github.com/user-attachments/assets/a83b639c-5016-4643-b6f3-d0605416d490
+
+**Delete Marks & Backup:**
+https://github.com/user-attachments/assets/fc394ec8-2eda-439f-b789-f43a94973fc1
 
 ## KEybinds:
 
