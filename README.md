@@ -37,9 +37,11 @@ Highlight or annotate content and delete the marks. You will be asked
 to backup your file before deleting the marks. 
 
 **Annotate:**
+
 https://github.com/user-attachments/assets/a83b639c-5016-4643-b6f3-d0605416d490
 
 **Delete Marks & Backup:**
+
 https://github.com/user-attachments/assets/fc394ec8-2eda-439f-b789-f43a94973fc1
 
 ## KEybinds:
