@@ -12,6 +12,8 @@ way easier for me. Later on added stuff I thought was handy.
 
 - works best with the obsidian.nvim plugin. 
 
+<img width="1919" height="1079" alt="Image" src="https://github.com/user-attachments/assets/1f3f529b-2f78-4133-8875-df46a51fd539" />
+
 ## Annotations and Highlights 
 
  Inline tags for colour, underline and numbered annotations. Invisible
@@ -64,7 +66,7 @@ https://github.com/user-attachments/assets/fc394ec8-2eda-439f-b789-f43a94973fc1
 | `q / <Esc>` | Close toolbar |
 
 
-## Install
+## Install (lazy)
 
 ```lua
 -- ~/.config/nvim/lua/plugins/glossator-nvim.lua
@@ -105,7 +107,7 @@ return {
 
 ## Disclaimer
 
-Note: The notes pane remaps dd and <CR> to preserve line-to-line
+Note: The notes pane remaps ``dd`` and ``<CR>`` to preserve line-to-line
 alignment between the two panes.
 
 
