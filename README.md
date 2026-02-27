@@ -73,6 +73,10 @@ https://github.com/user-attachments/assets/fc394ec8-2eda-439f-b789-f43a94973fc1
 return {
   "jbuck95/glossator-nvim",
   ft = "markdown",
+	keys = {
+  	  { "<leader>e",  "<Plug>(GlossatorToolbar)", mode = "v", ft = "markdown" },
+   	 { "<leader>gs", "<Plug>(GlossatorPane)",    mode = "n", ft = "markdown" },
+  	},
   config = function()
     require("glossator-nvim").setup({
       -- ── Highlight Tags (background color) ──────────────────────

@@ -7,7 +7,6 @@ local fn = vim.fn
 
 local ns_toolbar = api.nvim_create_namespace("glossator")
 
--- Werden in M.setup() befüllt (konfigurierbar via glossator-nvim.lua)
 local hl_tags = {}
 local ul_tags = {}
 local toolbar_hl = {}
@@ -15,7 +14,6 @@ local fmt_actions = {}
 local par_actions = {}
 local tag_to_group = {}
 
--- Vorwärtsdeklaration für glossator State
 local cs_state = {
   main_buf = nil,
   notes_buf = nil,
@@ -346,6 +344,8 @@ local function open_toolbar()
   vim.keymap.set("n", "<Esc>", function() api.nvim_win_close(win, true) end, opts)
 end
 
+M.open_toolbar = open_toolbar
+
 -- ── 3. Glossator Definitionen & State ──────────────────────────────────────────
 
 local DATA_DIR = fn.expand("~/Documents/glossator")
@@ -663,14 +663,26 @@ function M.setup(opts)
   vim.api.nvim_create_autocmd("FileType", {
     pattern = "markdown", callback = function() vim.opt_local.conceallevel = 2 end,
   })
-  vim.keymap.set("v", "<leader>e", function()
+  -- <Plug> mappings (global, no conflict, user can remap freely)
+  vim.keymap.set("v", "<Plug>(GlossatorToolbar)", function()
     local esc = api.nvim_replace_termcodes("<Esc>", true, false, true)
     api.nvim_feedkeys(esc, "x", false)
     vim.schedule(open_toolbar)
-  end, { desc = "Editing Toolbar" })
-  vim.keymap.set("n", "<leader>gs", function()
-    M.open_glossator()
-  end, { desc = "Open Glossator" })
+  end, { desc = "Glossator: open toolbar" })
+  vim.keymap.set("n", "<Plug>(GlossatorPane)", M.open_glossator, { desc = "Glossator: open pane" })
+
+  -- Default buffer-local keymaps, markdown only — users override via after/ftplugin/markdown.lua
+  api.nvim_create_autocmd("FileType", {
+    pattern = "markdown",
+    callback = function(ev)
+      if not vim.fn.hasmapto("<Plug>(GlossatorToolbar)", "v") then
+        vim.keymap.set("v", "<leader>e", "<Plug>(GlossatorToolbar)", { buffer = ev.buf, desc = "Glossator: toolbar" })
+      end
+      if not vim.fn.hasmapto("<Plug>(GlossatorPane)", "n") then
+        vim.keymap.set("n", "<leader>gs", "<Plug>(GlossatorPane)", { buffer = ev.buf, desc = "Glossator: pane" })
+      end
+    end,
+  })
 end
 
 return M
