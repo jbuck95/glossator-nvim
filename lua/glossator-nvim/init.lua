@@ -348,19 +348,10 @@ M.open_toolbar = open_toolbar
 
 -- ── 3. Glossator Definitionen & State ──────────────────────────────────────────
 
-local DATA_DIR = fn.expand("~/Documents/glossator")
 local ns_glossator = api.nvim_create_namespace("glossatorHeaderTracking")
 
-local function ensure_notes_dir()
-  if fn.isdirectory(DATA_DIR) == 0 then
-    fn.mkdir(DATA_DIR, "p")
-  end
-end
-
-local function get_notes_path(file_path)
-  local safe_name = file_path:gsub("[^%w%.]", "_")
-  return DATA_DIR .. "/" .. safe_name .. ".notes.md"
-end
+-- Wird in setup() mit opts befüllt
+local resolve
 
 local function is_valid_sync_context()
   local curr_win = api.nvim_get_current_win()
@@ -554,8 +545,7 @@ function M.open_glossator()
     return
   end
 
-  ensure_notes_dir()
-  local notes_file = get_notes_path(current_file)
+  local notes_file = resolve(current_file)
 
   cs_state.main_win = api.nvim_get_current_win()
   cs_state.main_buf = api.nvim_get_current_buf()
@@ -610,6 +600,19 @@ end
 function M.setup(opts)
   opts = opts or {}
 
+  -- resolve aufbauen: notes_dir > custom resolve > hardcoded default
+  local default_dir = opts.notes_dir
+    and fn.expand(opts.notes_dir)
+    or fn.expand("~/Documents/glossator")
+
+  resolve = function(filepath)
+    if fn.isdirectory(default_dir) == 0 then fn.mkdir(default_dir, "p") end
+    local safe_name = filepath:gsub("[^%w%.]", "_")
+    return default_dir .. "/" .. safe_name .. ".notes.md"
+  end
+
+  if opts.resolve then resolve = opts.resolve end
+
   -- Farb-Tags (überschreibbar via glossator-nvim.lua)
   hl_tags = opts.hl_tags or {
     { key = "r", tag = "[hr]", group = "ETRed",    hl = { bg = "#a02b2b", fg = "#ffffff" } },
@@ -663,7 +666,6 @@ function M.setup(opts)
   vim.api.nvim_create_autocmd("FileType", {
     pattern = "markdown", callback = function() vim.opt_local.conceallevel = 2 end,
   })
-  -- <Plug> mappings (global, no conflict, user can remap freely)
   vim.keymap.set("v", "<Plug>(GlossatorToolbar)", function()
     local esc = api.nvim_replace_termcodes("<Esc>", true, false, true)
     api.nvim_feedkeys(esc, "x", false)
@@ -671,15 +673,14 @@ function M.setup(opts)
   end, { desc = "Glossator: open toolbar" })
   vim.keymap.set("n", "<Plug>(GlossatorPane)", M.open_glossator, { desc = "Glossator: open pane" })
 
-  -- Default buffer-local keymaps, markdown only — users override via after/ftplugin/markdown.lua
   api.nvim_create_autocmd("FileType", {
     pattern = "markdown",
     callback = function(ev)
       if not vim.fn.hasmapto("<Plug>(GlossatorToolbar)", "v") then
-        vim.keymap.set("v", "<leader>e", "<Plug>(GlossatorToolbar)", { buffer = ev.buf, desc = "Glossator: toolbar" })
+        vim.keymap.set("v", "<leader>e",  "<Plug>(GlossatorToolbar)", { buffer = ev.buf, desc = "Glossator: toolbar" })
       end
       if not vim.fn.hasmapto("<Plug>(GlossatorPane)", "n") then
-        vim.keymap.set("n", "<leader>gs", "<Plug>(GlossatorPane)", { buffer = ev.buf, desc = "Glossator: pane" })
+        vim.keymap.set("n", "<leader>gs", "<Plug>(GlossatorPane)",    { buffer = ev.buf, desc = "Glossator: pane" })
       end
     end,
   })
