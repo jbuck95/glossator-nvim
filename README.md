@@ -1,7 +1,7 @@
 # Glossator
 
 Glossator is a Neovim plugin for (mainly myself, but also) anyone who
-not only writes texts but also edits them — editors, translators,
+not only writes but also edits text — editors, translators,
 reviewers. It adds three things to enhance the writing workflow:
 visible inline markings that disappear when exported, a synchronous
 note window that runs alongside the text, and a contextual toolbar
@@ -46,7 +46,7 @@ https://github.com/user-attachments/assets/a83b639c-5016-4643-b6f3-d0605416d490
 
 https://github.com/user-attachments/assets/fc394ec8-2eda-439f-b789-f43a94973fc1
 
-## KEybinds:
+## Keybinds:
 
 ### Global
 | Key | Mode | Action |
