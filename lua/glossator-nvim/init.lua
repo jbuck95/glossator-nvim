@@ -628,7 +628,6 @@ function M.setup(opts)
     { key = "B", tag = "[ub]", group = "ETBlueUL",   hl = { underline = true, sp = "#2b6ba0" } },
     { key = "Y", tag = "[uy]", group = "ETYellowUL", hl = { underline = true, sp = "#ddce23" } },
     { key = "P", tag = "[up]", group = "ETPurpleUL", hl = { underline = true, sp = "#7c5cbf" } },
-    { key = "a", tag = "ANT",  group = "ETAnnotate", hl = { underline = true, sp = "#00ffff" } },
   }
 
   toolbar_hl = opts.toolbar_hl or {
