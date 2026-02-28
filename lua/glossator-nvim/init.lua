@@ -636,6 +636,7 @@ function M.setup(opts)
     ETSep        = { fg = "#45475a" },
     ETAnnotateID = { fg = "#00ffff", bold = true },
     ETComment    = { fg = "#6c7086", italic = true },
+		ETAnnotate   = { underline = true, sp = "#00ffff" },
   }
 
   fmt_actions = opts.fmt_actions or {
