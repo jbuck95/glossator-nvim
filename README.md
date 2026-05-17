@@ -66,6 +66,14 @@ https://github.com/user-attachments/assets/fc394ec8-2eda-439f-b789-f43a94973fc1
 | `q / <Esc>` | Close toolbar |
 
 
+## Verify
+
+`:checkhealth glossator-nvim`
+
+## Dependencies
+
+No external dependencies. The directory `~/Documents/glossator/` is auto-created on first use.
+
 ## Install (lazy)
 
 ```lua
