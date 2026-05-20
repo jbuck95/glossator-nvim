@@ -46,13 +46,28 @@ https://github.com/user-attachments/assets/a83b639c-5016-4643-b6f3-d0605416d490
 
 https://github.com/user-attachments/assets/fc394ec8-2eda-439f-b789-f43a94973fc1
 
-## Keybinds:
+## Commands
 
-### Global
-| Key | Mode | Action |
-|-----|------|--------|
-| `<leader>e` | Visual | Open Toolbar |
-| `<leader>gs` | Normal | Open Glossator Pane |
+| Command | Action |
+|---------|--------|
+| `:Glossator toolbar` | Open the formatting toolbar |
+| `:Glossator pane`    | Open the synchronous notes pane |
+
+## Keymaps
+
+No global keymaps are set automatically. Map the `<Plug>` stubs to
+keys of your choice:
+
+```lua
+vim.keymap.set("v", "<leader>e",  "<Plug>(GlossatorToolbar)", { desc = "Glossator: toolbar" })
+vim.keymap.set("n", "<leader>gs", "<Plug>(GlossatorPane)",    { desc = "Glossator: pane" })
+```
+
+Or call the Lua API directly:
+
+```lua
+vim.keymap.set("n", "<leader>gs", function() require("glossator-nvim").open_glossator() end)
+```
 
 ### Toolbar
 | Key | Action |
@@ -74,64 +89,80 @@ https://github.com/user-attachments/assets/fc394ec8-2eda-439f-b789-f43a94973fc1
 
 No external dependencies. The directory `~/Documents/glossator/` is auto-created on first use.
 
-## Install (lazy)
+## Install
+
+The plugin works out of the box — no `setup()` call required.
+Conceallevel is set automatically for markdown buffers.
+
+**Minimal** (lazy.nvim):
 
 ```lua
--- ~/.config/nvim/lua/plugins/glossator-nvim.lua
-return {
-	"jbuck95/glossator-nvim",
-	ft  = "markdown",
-	keys = {
-		{ "<leader>e",  "<Plug>(GlossatorToolbar)", mode = "v", ft = "markdown" },
-		{ "<leader>gs", "<Plug>(GlossatorPane)",    mode = "n", ft = "markdown" },
-	},
-	config = function()
-		
-			-- ── Annotation Storage ───────────────────────────────────────────────────
-			-- Option A: Fixed Folder 
-			notes_dir = "~/Documents/glossator",
+{
+  "jbuck95/glossator-nvim",
+  ft = "markdown",
+  keys = {
+    { "<leader>e",  "<Plug>(GlossatorToolbar)", mode = "v" },
+    { "<leader>gs", "<Plug>(GlossatorPane)",    mode = "n" },
+  },
+}
+```
 
-			-- Option B: resolve (overrides notes_dir)
-			-- resolve = function(filepath)
-			-- 	local dir  = vim.fn.fnamemodify(filepath, ":h")
-			-- 	local name = vim.fn.fnamemodify(filepath, ":t:r")
-			-- 	return dir .. "/" .. name .. ".annotations.md"     -- Set specific name for your files
-			-- end,
+**With configuration** (all fields optional):
 
-			-- ── Highlight Tags (background color) ───────────────────────────────────
-			hl_tags = {
-				{ key = "r", tag = "[hr]", group = "ETRed",    hl = { bg = "#a02b2b", fg = "#ffffff" } },
-				{ key = "g", tag = "[hg]", group = "ETGreen",  hl = { bg = "#0f700c", fg = "#ffffff" } },
-				{ key = "b", tag = "[hb]", group = "ETBlue",   hl = { bg = "#2b6ba0", fg = "#ffffff" } },
-				{ key = "y", tag = "[hy]", group = "ETYellow", hl = { bg = "#b5a40c", fg = "#ffffff" } },
-				{ key = "p", tag = "[hp]", group = "ETPurple", hl = { bg = "#25184c", fg = "#ffffff" } },
-			},
+```lua
+{
+  "jbuck95/glossator-nvim",
+  ft = "markdown",
+  keys = {
+    { "<leader>e",  "<Plug>(GlossatorToolbar)", mode = "v" },
+    { "<leader>gs", "<Plug>(GlossatorPane)",    mode = "n" },
+  },
+  config = function()
+    require("glossator-nvim").setup({
+      -- Annotation storage
+      notes_dir = "~/Documents/glossator",       -- default
+      -- resolve = function(filepath) ... end,   -- custom path resolver
 
-			-- ── Underline Tags ───────────────────────────────────────────────────────
-			ul_tags = {
-				{ key = "R", tag = "[ur]", group = "ETRedUL",    hl = { underline = true, sp = "#a02b2b" } },
-				{ key = "G", tag = "[ug]", group = "ETGreenUL",  hl = { underline = true, sp = "#0f700c" } },
-				{ key = "B", tag = "[ub]", group = "ETBlueUL",   hl = { underline = true, sp = "#2b6ba0" } },
-				{ key = "Y", tag = "[uy]", group = "ETYellowUL", hl = { underline = true, sp = "#ddce23" } },
-				{ key = "P", tag = "[up]", group = "ETPurpleUL", hl = { underline = true, sp = "#7c5cbf" } },
-				{ key = "a", tag = "ANT",  group = "ETAnnotate", hl = { underline = true, sp = "#00A6FF" } },
-			},
+      hl_tags = {                                 -- highlight tags
+        { key = "r", tag = "[hr]", group = "ETRed",    hl = { bg = "#a02b2b", fg = "#ffffff" } },
+        { key = "g", tag = "[hg]", group = "ETGreen",  hl = { bg = "#0f700c", fg = "#ffffff" } },
+        { key = "b", tag = "[hb]", group = "ETBlue",   hl = { bg = "#2b6ba0", fg = "#ffffff" } },
+        { key = "y", tag = "[hy]", group = "ETYellow", hl = { bg = "#b5a40c", fg = "#ffffff" } },
+        { key = "p", tag = "[hp]", group = "ETPurple", hl = { bg = "#25184c", fg = "#ffffff" } },
+      },
 
-			-- ── Toolbar UI Colors ────────────────────────────────────────────────────
-			toolbar_hl = {
-				ETHeader     = { fg = "#7f849c", bold = true },
-				ETKey        = { fg = "#cdd6f4", bold = true },
-				ETSep        = { fg = "#45475a" },
-				ETAnnotateID = { fg = "#00ffff", bold = true },
-				ETComment    = { fg = "#6c7086", italic = true },
-				ETAnnotate   = { underline = true, sp = "#0a477e" },
-			},
+      ul_tags = {                                 -- underline tags
+        { key = "R", tag = "[ur]", group = "ETRedUL",    hl = { underline = true, sp = "#a02b2b" } },
+        { key = "G", tag = "[ug]", group = "ETGreenUL",  hl = { underline = true, sp = "#0f700c" } },
+        { key = "B", tag = "[ub]", group = "ETBlueUL",   hl = { underline = true, sp = "#2b6ba0" } },
+        { key = "Y", tag = "[uy]", group = "ETYellowUL", hl = { underline = true, sp = "#ddce23" } },
+        { key = "P", tag = "[up]", group = "ETPurpleUL", hl = { underline = true, sp = "#7c5cbf" } },
+      },
 
-		})
-		vim.schedule(function()
-			require("glossator-nvim").load_highlights()
-		end)
-	end,
+      toolbar_hl = {                              -- toolbar UI colors
+        ETHeader     = { fg = "#7f849c", bold = true },
+        ETKey        = { fg = "#cdd6f4", bold = true },
+        ETSep        = { fg = "#45475a" },
+        ETAnnotateID = { fg = "#00ffff", bold = true },
+        ETComment    = { fg = "#6c7086", italic = true },
+        ETAnnotate   = { underline = true, sp = "#00ffff" },
+      },
+
+      fmt_actions = {                             -- formatting actions
+        { key = "i", label = "Italic", wrap = { "*",  "*"  } },
+        { key = "f", label = "Bold",   wrap = { "**", "**" } },
+        { key = "s", label = "Strike", wrap = { "~~", "~~" } },
+      },
+
+      par_actions = {                             -- wrapping actions
+        { key = '"', label = '""', wrap = { '"', '"' } },
+        { key = "'", label = "''", wrap = { "'", "'" } },
+        { key = "(", label = "()", wrap = { "(", ")" } },
+        { key = "[", label = "[]", wrap = { "[", "]" } },
+        { key = "{", label = "{}", wrap = { "{", "}" } },
+      },
+    })
+  end,
 }
 ```
 
