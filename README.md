@@ -66,7 +66,12 @@ vim.keymap.set("n", "<leader>gs", "<Plug>(GlossatorPane)",    { desc = "Glossato
 Or call the Lua API directly:
 
 ```lua
-vim.keymap.set("n", "<leader>gs", function() require("glossator-nvim").open_glossator() end)
+local g = require("glossator-nvim")
+
+g.open_glossator()      -- Open synced notes pane
+g.open_toolbar()        -- Open formatting toolbar
+g.load_highlights()     -- Re-run highlight rendering
+g.setup({ ... })        -- Optional configuration
 ```
 
 ### Toolbar
@@ -81,13 +86,11 @@ vim.keymap.set("n", "<leader>gs", function() require("glossator-nvim").open_glos
 | `q / <Esc>` | Close toolbar |
 
 
-## Verify
-
-`:checkhealth glossator-nvim`
-
-## Dependencies
+## Requirements
 
 No external dependencies. The directory `~/Documents/glossator/` is auto-created on first use.
+
+Verify: `:checkhealth glossator-nvim`  |  Help: `:h glossator-nvim`
 
 ## Install
 
@@ -165,6 +168,33 @@ Conceallevel is set automatically for markdown buffers.
   end,
 }
 ```
+
+## Configuration
+
+| Option | Description |
+|--------|-------------|
+| `notes_dir` | Directory for annotation files (default: `~/Documents/glossator`) |
+| `resolve` | Custom path resolver function |
+| `hl_tags` | Highlight tag definitions (key, tag, group, hl) |
+| `ul_tags` | Underline tag definitions (key, tag, group, hl) |
+| `toolbar_hl` | Toolbar UI highlight groups |
+| `fmt_actions` | Formatting actions (italic, bold, strikethrough) |
+| `par_actions` | Wrapping actions (quotes, brackets, etc.) |
+
+## Minimal Config for Issues
+
+```lua
+vim.cmd([[set rtp+=~/.local/share/nvim/lazy/glossator-nvim]])
+vim.bo.conceallevel = 2
+```
+
+## Credits
+
+Inspired by various editor annotation and inline-comment tools.
+
+## License
+
+MIT
 
 ## Disclaimer
 

@@ -828,15 +828,15 @@ function M.setup(opts)
     init()
   else
     -- already initialized, merge new values
-    local ok, err = pcall(vim.validate, {
-      hl_tags = { opts.hl_tags, "table", true },
-      ul_tags = { opts.ul_tags, "table", true },
-      toolbar_hl = { opts.toolbar_hl, "table", true },
-      fmt_actions = { opts.fmt_actions, "table", true },
-      par_actions = { opts.par_actions, "table", true },
-      notes_dir = { opts.notes_dir, "string", true },
-      resolve = { opts.resolve, "function", true },
-    })
+    local ok, err = pcall(function()
+      vim.validate("hl_tags", opts.hl_tags, "table", true)
+      vim.validate("ul_tags", opts.ul_tags, "table", true)
+      vim.validate("toolbar_hl", opts.toolbar_hl, "table", true)
+      vim.validate("fmt_actions", opts.fmt_actions, "table", true)
+      vim.validate("par_actions", opts.par_actions, "table", true)
+      vim.validate("notes_dir", opts.notes_dir, "string", true)
+      vim.validate("resolve", opts.resolve, "function", true)
+    end)
     if not ok then
       vim.notify("glossator-nvim: invalid config: " .. tostring(err), vim.log.levels.ERROR)
       return
