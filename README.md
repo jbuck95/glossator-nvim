@@ -28,6 +28,11 @@ and [ax] annotations - all content below these elements will be synced
 accordingly. When you save the main file, elements on the right pane
 will sync to match the texts line numbers.
 
+The notes pane is linked to your markdown file via a UUID stored in
+YAML frontmatter and a SQLite mapping table. This means you can rename
+or move your markdown file and the connection to its notes is preserved.
+``:w`` in the main pane also saves the notes pane; ``:q``/``:wq`` closes both.
+
 https://github.com/user-attachments/assets/ea84ff35-db27-47da-b4af-17c68362f8b7
 
 ## Editing-Toolbar
@@ -88,7 +93,9 @@ g.setup({ ... })        -- Optional configuration
 
 ## Requirements
 
-No external dependencies. The directory `~/Documents/glossator/` is auto-created on first use.
+- `sqlite3` CLI (for persistent UUID-based notes linking; falls back to
+  path-based resolution if unavailable)
+- The directory `~/Documents/glossator/` is auto-created on first use.
 
 Verify: `:checkhealth glossator-nvim`  |  Help: `:h glossator-nvim`
 
@@ -124,6 +131,7 @@ Conceallevel is set automatically for markdown buffers.
     require("glossator-nvim").setup({
       -- Annotation storage
       notes_dir = "~/Documents/glossator",       -- default
+      db_file  = "~/Documents/glossator.sqlite3", -- default
       -- resolve = function(filepath) ... end,   -- custom path resolver
 
       hl_tags = {                                 -- highlight tags
@@ -174,6 +182,7 @@ Conceallevel is set automatically for markdown buffers.
 | Option | Description |
 |--------|-------------|
 | `notes_dir` | Directory for annotation files (default: `~/Documents/glossator`) |
+| `db_file` | SQLite database path (default: `~/Documents/glossator.sqlite3`) |
 | `resolve` | Custom path resolver function |
 | `hl_tags` | Highlight tag definitions (key, tag, group, hl) |
 | `ul_tags` | Underline tag definitions (key, tag, group, hl) |
@@ -198,12 +207,20 @@ MIT
 
 ## Disclaimer
 
-Note ``dd`` and ``<CR>`` remaps have been removed; the notes pane now relies
-on SQLite-backed UUID linking which survives file moves and renames. ``:w``
-in the main pane also saves the notes pane, and ``:q``/``:wq`` closes both.
-
 Built for my personal master's thesis workflow.
 AI was used extensively in development.
+
+### Breaking changes (2026-06-25)
+
+- The notes pane no longer remaps ``dd`` and ``<CR>`` — standard Neovim
+  behavior is restored.
+- ``:w`` in the main pane now also saves the notes pane; ``:q``/``:wq``
+  closes both panes. This cannot be disabled.
+- Notes are now linked via a UUID in YAML frontmatter + a SQLite database
+  (``~/Documents/glossator.sqlite3``). The existing path-based notes
+  files are migrated on first use when ``open_glossator()`` is called.
+  If ``sqlite3`` is not installed, Glossator falls back silently to
+  path-based resolution.
 
 
 
