@@ -603,6 +603,35 @@ local function is_valid_sync_context()
   return false
 end
 
+local function copy_headers_to_notes()
+  if not cs_state.notes_buf or not api.nvim_buf_is_valid(cs_state.notes_buf) then
+    return
+  end
+
+  local notes_lines = api.nvim_buf_get_lines(cs_state.notes_buf, 0, -1, false)
+  local is_empty = true
+  for _, line in ipairs(notes_lines) do
+    if line ~= "" then
+      is_empty = false
+      break
+    end
+  end
+  if not is_empty then
+    return
+  end
+
+  local main_lines = api.nvim_buf_get_lines(cs_state.main_buf, 0, -1, false)
+  local new_notes = {}
+  for _, line in ipairs(main_lines) do
+    if line:match("^#+%s+") then
+      table.insert(new_notes, line)
+    else
+      table.insert(new_notes, "")
+    end
+  end
+  api.nvim_buf_set_lines(cs_state.notes_buf, 0, -1, false, new_notes)
+end
+
 local function align_by_headers()
   if not cs_state.notes_buf or not api.nvim_buf_is_valid(cs_state.notes_buf) then
     return
@@ -838,6 +867,7 @@ function M.open_glossator()
   api.nvim_buf_set_option(cs_state.notes_buf, "filetype", "markdown")
   api.nvim_win_set_option(cs_state.notes_win, "wrap", true)
 
+  copy_headers_to_notes()
   align_by_headers()
   adjust_length_on_edit()
 
