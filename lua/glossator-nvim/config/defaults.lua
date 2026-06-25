@@ -21,6 +21,7 @@
 local M = {}
 
 M.notes_dir = vim.fn.expand("~/Documents/glossator")
+M.db_file = vim.fn.expand("~/Documents/glossator.sqlite3")
 
 M.hl_tags = {
   { key = "r", tag = "[hr]", group = "ETRed",    hl = { bg = "#a02b2b", fg = "#ffffff" } },

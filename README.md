@@ -198,12 +198,12 @@ MIT
 
 ## Disclaimer
 
-Note: The notes pane remaps ``dd`` and ``<CR>`` to preserve line-to-line
-alignment between the two panes.
+Note ``dd`` and ``<CR>`` remaps have been removed; the notes pane now relies
+on SQLite-backed UUID linking which survives file moves and renames. ``:w``
+in the main pane also saves the notes pane, and ``:q``/``:wq`` closes both.
 
-
-Many aspects are vibed, I'd happily take your pr's to make the plugin
-better.
+Built for my personal master's thesis workflow.
+AI was used extensively in development.
 
 
 

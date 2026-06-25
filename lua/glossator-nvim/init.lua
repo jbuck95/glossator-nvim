@@ -1,5 +1,6 @@
 ---@class GlossatorConfig
 ---@field notes_dir     string
+---@field db_file       string
 ---@field resolve       fun(filepath:string):string
 ---@field hl_tags       GlossatorTag[]
 ---@field ul_tags       GlossatorTag[]
@@ -34,6 +35,7 @@ local config
 local did_init = false
 
 local cs_state = {
+  current_buf = nil,
   main_buf = nil,
   notes_buf = nil,
   main_win = nil,
@@ -70,6 +72,83 @@ local function build_tag_to_group()
     m[t.tag] = t.group
   end
   config.tag_to_group = m
+end
+
+local db_available = false
+
+local function generate_uuid()
+  local f = io.open("/proc/sys/kernel/random/uuid", "r")
+  if f then
+    local uuid = f:read("*l")
+    f:close()
+    if uuid then return uuid end
+  end
+  local random = math.random
+  return string.format("%04x%04x-%04x-%04x-%04x-%04x%04x%04x",
+    random(0xffff), random(0xffff), random(0xffff),
+    random(0xffff), random(0xffff), random(0xffff),
+    random(0xffff), random(0xffff))
+end
+
+local function read_glossator_id(bufnr)
+  local lines = api.nvim_buf_get_lines(bufnr, 0, math.min(20, api.nvim_buf_line_count(bufnr)), false)
+  if #lines < 3 or lines[1] ~= "---" then return nil end
+  for i = 2, #lines do
+    if lines[i] == "---" then break end
+    local id = lines[i]:match("^glossator_id:%s*(%S+)")
+    if id then return id end
+  end
+  return nil
+end
+
+local function ensure_glossator_id(bufnr)
+  local id = read_glossator_id(bufnr)
+  if id then return id end
+  id = generate_uuid()
+  local lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  if #lines > 0 and lines[1] == "---" then
+    local insert_pos = 2
+    for i = 2, #lines do
+      if lines[i] == "---" then
+        insert_pos = i
+        break
+      end
+    end
+    table.insert(lines, insert_pos, "glossator_id: " .. id)
+  else
+    table.insert(lines, 1, "---")
+    table.insert(lines, 2, "glossator_id: " .. id)
+    table.insert(lines, 3, "---")
+  end
+  api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+  return id
+end
+
+local function resolve_notes_for_buf(bufnr)
+  if db_available then
+    local uuid = read_glossator_id(bufnr)
+    if uuid then
+      local notes = require("glossator-nvim.db.sqlite").get_notes_path(uuid)
+      if notes then return notes end
+    end
+  end
+
+  ensure_glossator_id(bufnr)
+  local filepath = api.nvim_buf_get_name(bufnr)
+  local notes_dir = config.notes_dir
+  if fn.isdirectory(notes_dir) == 0 then
+    fn.mkdir(notes_dir, "p")
+  end
+  local safe_name = filepath:gsub("[^%w%.]", "_")
+  local notes = notes_dir .. "/" .. safe_name .. ".notes.md"
+
+  if db_available then
+    local uuid = read_glossator_id(bufnr)
+    if uuid then
+      require("glossator-nvim.db.sqlite").upsert_link(uuid, notes, filepath)
+    end
+  end
+  return notes
 end
 
 local function build_resolve()
@@ -732,16 +811,25 @@ end
 
 ---Open the synchronous notes pane for the current buffer.
 function M.open_glossator()
-  local current_file = api.nvim_buf_get_name(0)
+  local current_buf = api.nvim_get_current_buf()
+  local current_file = api.nvim_buf_get_name(current_buf)
   if current_file == "" then
     vim.notify("glossator: Cannot sync an unnamed buffer.", vim.log.levels.WARN)
     return
   end
 
-  local notes_file = config.resolve(current_file)
+  if cs_state.current_buf == current_buf
+    and api.nvim_buf_is_valid(cs_state.main_buf)
+    and api.nvim_win_is_valid(cs_state.notes_win) then
+    api.nvim_set_current_win(cs_state.notes_win)
+    return
+  end
 
+  local notes_file = resolve_notes_for_buf(current_buf)
+
+  cs_state.current_buf = current_buf
   cs_state.main_win = api.nvim_get_current_win()
-  cs_state.main_buf = api.nvim_get_current_buf()
+  cs_state.main_buf = current_buf
 
   vim.cmd("rightbelow vsplit " .. fn.fnameescape(notes_file))
   cs_state.notes_win = api.nvim_get_current_win()
@@ -749,18 +837,6 @@ function M.open_glossator()
 
   api.nvim_buf_set_option(cs_state.notes_buf, "filetype", "markdown")
   api.nvim_win_set_option(cs_state.notes_win, "wrap", true)
-
-  local opts = { buffer = cs_state.notes_buf, noremap = true, silent = true }
-
-  vim.keymap.set("i", "<CR>", function()
-    local line = fn.line(".")
-    local last_line = api.nvim_buf_line_count(cs_state.main_buf)
-    return line < last_line and "<Esc>jA" or "<CR>"
-  end, { buffer = cs_state.notes_buf, expr = true })
-
-  vim.keymap.set("n", "dd", function()
-    api.nvim_set_current_line("")
-  end, opts)
 
   align_by_headers()
   adjust_length_on_edit()
@@ -788,6 +864,29 @@ function M.open_glossator()
     end,
   })
 
+  api.nvim_create_autocmd("BufWritePre", {
+    group = group,
+    buffer = cs_state.main_buf,
+    callback = function()
+      if api.nvim_buf_is_valid(cs_state.notes_buf) then
+        api.nvim_buf_call(cs_state.notes_buf, function()
+          vim.cmd("write")
+        end)
+      end
+    end,
+  })
+
+  api.nvim_create_autocmd("QuitPre", {
+    group = group,
+    callback = function()
+      local curr_win = api.nvim_get_current_win()
+      if curr_win == cs_state.main_win
+        and api.nvim_win_is_valid(cs_state.notes_win) then
+        api.nvim_win_close(cs_state.notes_win, true)
+      end
+    end,
+  })
+
   api.nvim_set_current_win(cs_state.main_win)
 end
 
@@ -803,6 +902,15 @@ local function init()
 
   build_tag_to_group()
   build_resolve()
+
+  local ok = pcall(function()
+    local db = require("glossator-nvim.db.sqlite")
+    db.set_config(config)
+    db_available = db.init()
+  end)
+  if not ok then
+    db_available = false
+  end
 
   set_highlights()
 
@@ -835,6 +943,7 @@ function M.setup(opts)
       vim.validate("fmt_actions", opts.fmt_actions, "table", true)
       vim.validate("par_actions", opts.par_actions, "table", true)
       vim.validate("notes_dir", opts.notes_dir, "string", true)
+      vim.validate("db_file", opts.db_file, "string", true)
       vim.validate("resolve", opts.resolve, "function", true)
     end)
     if not ok then
@@ -850,6 +959,14 @@ function M.setup(opts)
     elseif opts.notes_dir then
       config.notes_dir = opts.notes_dir
       build_resolve()
+    end
+
+    if opts.db_file then
+      config.db_file = opts.db_file
+      pcall(function()
+        local db = require("glossator-nvim.db.sqlite")
+        db.set_config(config)
+      end)
     end
 
     build_tag_to_group()
