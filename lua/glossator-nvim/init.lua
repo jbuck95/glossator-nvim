@@ -60,7 +60,14 @@ end
 ---@return GlossatorConfig
 local function create_config(opts)
   local defaults = require("glossator-nvim.config.defaults")
-  return vim.tbl_deep_extend("force", defaults, opts or {})
+  local cfg = vim.tbl_deep_extend("force", defaults, opts or {})
+  if cfg.notes_dir then
+    cfg.notes_dir = vim.fn.expand(cfg.notes_dir)
+  end
+  if cfg.db_file then
+    cfg.db_file = vim.fn.expand(cfg.db_file)
+  end
+  return cfg
 end
 
 local function build_tag_to_group()
@@ -987,12 +994,12 @@ function M.setup(opts)
     if opts.resolve then
       config.resolve = opts.resolve
     elseif opts.notes_dir then
-      config.notes_dir = opts.notes_dir
+      config.notes_dir = vim.fn.expand(opts.notes_dir)
       build_resolve()
     end
 
     if opts.db_file then
-      config.db_file = opts.db_file
+      config.db_file = vim.fn.expand(opts.db_file)
       pcall(function()
         local db = require("glossator-nvim.db.sqlite")
         db.set_config(config)

@@ -7,7 +7,8 @@ function M.set_config(cfg)
 end
 
 local function db_path()
-  return config.db_file or vim.fn.expand("~/Documents/glossator.sqlite3")
+  local path = config and config.db_file or "~/Documents/glossator.sqlite3"
+  return vim.fn.expand(path)
 end
 
 local function esc(s)
