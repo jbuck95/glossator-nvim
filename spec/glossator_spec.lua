@@ -11,6 +11,7 @@ describe("glossator-nvim", function()
     assert.is_function(m.load_highlights)
     assert.is_function(m.open_toolbar)
     assert.is_function(m.open_glossator)
+    assert.is_function(m.close_glossator)
   end)
 
   it("defaults are returned by config module", function()
@@ -48,6 +49,87 @@ describe("glossator-nvim", function()
         vim.cmd("set ft=markdown")
         m.load_highlights()
       end)
+    end)
+  end)
+
+  describe("pane management", function()
+    local temp_file
+
+    before_each(function()
+      temp_file = vim.fn.tempname() .. ".md"
+      vim.cmd("edit " .. temp_file)
+      vim.api.nvim_buf_set_lines(0, 0, -1, false, { "# Title", "Some content" })
+      vim.cmd("write")
+    end)
+
+    after_each(function()
+      local m = require("glossator-nvim")
+      m.close_glossator()
+      vim.cmd("silent! bwipeout! " .. temp_file)
+      vim.fn.delete(temp_file)
+    end)
+
+    it("opens glossator notes pane alongside main buffer", function()
+      local m = require("glossator-nvim")
+      local main_win = vim.api.nvim_get_current_win()
+      m.open_glossator()
+
+      local wins = vim.api.nvim_tabpage_list_wins(0)
+      assert.are.equal(2, #wins)
+      assert.are.equal(main_win, vim.api.nvim_get_current_win())
+    end)
+
+    it("switches to notes pane when open_glossator called from main buffer while open", function()
+      local m = require("glossator-nvim")
+      local main_win = vim.api.nvim_get_current_win()
+      m.open_glossator()
+      assert.are.equal(main_win, vim.api.nvim_get_current_win())
+
+      m.open_glossator()
+      local current_win = vim.api.nvim_get_current_win()
+      assert.are_not.equal(main_win, current_win)
+    end)
+
+    it("closes notes pane and returns to main buffer when open_glossator called from notes buffer", function()
+      local m = require("glossator-nvim")
+      local main_win = vim.api.nvim_get_current_win()
+      m.open_glossator()
+      -- Switch to notes pane
+      m.open_glossator()
+      assert.are_not.equal(main_win, vim.api.nvim_get_current_win())
+
+      -- Calling open_glossator from inside the notes pane should close it
+      m.open_glossator()
+
+      local wins = vim.api.nvim_tabpage_list_wins(0)
+      assert.are.equal(1, #wins)
+      assert.are.equal(main_win, vim.api.nvim_get_current_win())
+    end)
+
+    it("close_glossator closes the notes window and returns to main window", function()
+      local m = require("glossator-nvim")
+      local main_win = vim.api.nvim_get_current_win()
+      m.open_glossator()
+      assert.are.equal(2, #vim.api.nvim_tabpage_list_wins(0))
+
+      m.close_glossator()
+      assert.are.equal(1, #vim.api.nvim_tabpage_list_wins(0))
+      assert.are.equal(main_win, vim.api.nvim_get_current_win())
+    end)
+
+    it("does not create a nested notes pane for a notes file", function()
+      local m = require("glossator-nvim")
+      local notes_file = vim.fn.tempname() .. ".notes.md"
+      vim.cmd("edit " .. notes_file)
+      vim.api.nvim_buf_set_lines(0, 0, -1, false, { "Note content" })
+
+      local win_count_before = #vim.api.nvim_tabpage_list_wins(0)
+      m.open_glossator()
+      local win_count_after = #vim.api.nvim_tabpage_list_wins(0)
+
+      assert.are.equal(win_count_before, win_count_after)
+      vim.cmd("silent! bwipeout! " .. notes_file)
+      vim.fn.delete(notes_file)
     end)
   end)
 

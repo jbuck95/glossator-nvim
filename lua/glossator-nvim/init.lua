@@ -845,10 +845,61 @@ local function adjust_length_on_edit()
   cs_state.syncing = false
 end
 
+---Close the synchronous notes pane and return focus to the main buffer.
+function M.close_glossator()
+  if cs_state.notes_buf and api.nvim_buf_is_valid(cs_state.notes_buf) then
+    if vim.bo[cs_state.notes_buf].modified then
+      pcall(api.nvim_buf_call, cs_state.notes_buf, function()
+        vim.cmd("silent! write")
+      end)
+    end
+  end
+
+  local main_win = cs_state.main_win
+  local notes_win = cs_state.notes_win
+
+  if notes_win and api.nvim_win_is_valid(notes_win) then
+    pcall(api.nvim_win_close, notes_win, true)
+  end
+
+  if main_win and api.nvim_win_is_valid(main_win) then
+    api.nvim_set_current_win(main_win)
+  elseif cs_state.main_buf and api.nvim_buf_is_valid(cs_state.main_buf) then
+    local wins = fn.win_findbuf(cs_state.main_buf)
+    if #wins > 0 and api.nvim_win_is_valid(wins[1]) then
+      api.nvim_set_current_win(wins[1])
+    end
+  end
+
+  cs_state.notes_win = nil
+  cs_state.notes_buf = nil
+  cs_state.current_buf = nil
+  cs_state.main_win = nil
+  cs_state.main_buf = nil
+  pcall(api.nvim_del_augroup_by_name, "glossator_Session")
+end
+
 ---Open the synchronous notes pane for the current buffer.
+---If called from inside an active glossator notes pane, closes it and returns to the main buffer.
 function M.open_glossator()
   local current_buf = api.nvim_get_current_buf()
+  local current_win = api.nvim_get_current_win()
   local current_file = api.nvim_buf_get_name(current_buf)
+
+  -- If currently inside the active notes pane, close it and return to main window
+  if (cs_state.notes_buf and current_buf == cs_state.notes_buf)
+    or (cs_state.notes_win and current_win == cs_state.notes_win)
+    or (vim.b[current_buf].is_glossator_notes and cs_state.notes_win and api.nvim_win_is_valid(cs_state.notes_win)) then
+    M.close_glossator()
+    return
+  end
+
+  -- Prevent creating notes panes for notes files
+  if vim.b[current_buf].is_glossator_notes or current_file:match("%.notes%.md$") then
+    vim.notify("glossator: Cannot open a glossator pane for a notes buffer.", vim.log.levels.WARN)
+    return
+  end
+
   if current_file == "" then
     vim.notify("glossator: Cannot sync an unnamed buffer.", vim.log.levels.WARN)
     return
@@ -861,6 +912,11 @@ function M.open_glossator()
     return
   end
 
+  -- Close existing notes window if opening for a different buffer
+  if cs_state.notes_win and api.nvim_win_is_valid(cs_state.notes_win) then
+    pcall(api.nvim_win_close, cs_state.notes_win, true)
+  end
+
   local notes_file = resolve_notes_for_buf(current_buf)
 
   cs_state.current_buf = current_buf
@@ -871,6 +927,7 @@ function M.open_glossator()
   cs_state.notes_win = api.nvim_get_current_win()
   cs_state.notes_buf = api.nvim_get_current_buf()
 
+  vim.b[cs_state.notes_buf].is_glossator_notes = true
   api.nvim_buf_set_option(cs_state.notes_buf, "filetype", "markdown")
   api.nvim_win_set_option(cs_state.notes_win, "wrap", true)
 
@@ -920,6 +977,20 @@ function M.open_glossator()
       if curr_win == cs_state.main_win
         and api.nvim_win_is_valid(cs_state.notes_win) then
         api.nvim_win_close(cs_state.notes_win, true)
+      end
+    end,
+  })
+
+  api.nvim_create_autocmd("WinClosed", {
+    group = group,
+    callback = function(args)
+      local closed_win = tonumber(args.match)
+      if closed_win == cs_state.notes_win then
+        cs_state.notes_win = nil
+        cs_state.notes_buf = nil
+        cs_state.current_buf = nil
+        cs_state.main_win = nil
+        cs_state.main_buf = nil
       end
     end,
   })

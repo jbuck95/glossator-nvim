@@ -56,7 +56,8 @@ https://github.com/user-attachments/assets/fc394ec8-2eda-439f-b789-f43a94973fc1
 | Command | Action |
 |---------|--------|
 | `:Glossator toolbar` | Open the formatting toolbar |
-| `:Glossator pane`    | Open the synchronous notes pane |
+| `:Glossator pane`    | Open/toggle the synchronous notes pane |
+| `:Glossator close`   | Close the synchronous notes pane |
 
 ## Keymaps
 
@@ -66,6 +67,7 @@ keys of your choice:
 ```lua
 vim.keymap.set("v", "<leader>e",  "<Plug>(GlossatorToolbar)", { desc = "Glossator: toolbar" })
 vim.keymap.set("n", "<leader>gs", "<Plug>(GlossatorPane)",    { desc = "Glossator: pane" })
+vim.keymap.set("n", "<leader>gc", "<Plug>(GlossatorClose)",   { desc = "Glossator: close" })
 ```
 
 Or call the Lua API directly:
@@ -73,7 +75,8 @@ Or call the Lua API directly:
 ```lua
 local g = require("glossator-nvim")
 
-g.open_glossator()      -- Open synced notes pane
+g.open_glossator()      -- Open/focus/close synced notes pane
+g.close_glossator()     -- Close synced notes pane
 g.open_toolbar()        -- Open formatting toolbar
 g.load_highlights()     -- Re-run highlight rendering
 g.setup({ ... })        -- Optional configuration

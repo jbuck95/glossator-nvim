@@ -24,15 +24,17 @@ api.nvim_create_user_command("Glossator", function(info)
     m.open_toolbar()
   elseif sub == "pane" then
     m.open_glossator()
+  elseif sub == "close" then
+    m.close_glossator()
   else
-    vim.notify("glossator: unknown subcommand '" .. sub .. "'. Usage: Glossator {toolbar,pane}", vim.log.levels.WARN)
+    vim.notify("glossator: unknown subcommand '" .. sub .. "'. Usage: Glossator {toolbar,pane,close}", vim.log.levels.WARN)
   end
 end, {
   nargs = 1,
   complete = function()
-    return { "toolbar", "pane" }
+    return { "toolbar", "pane", "close" }
   end,
-  desc = "Glossator: toolbar or pane",
+  desc = "Glossator: toolbar, pane or close",
 })
 
 -- <Plug> mappings
@@ -47,3 +49,7 @@ end, { desc = "Glossator: open toolbar" })
 vim.keymap.set("n", "<Plug>(GlossatorPane)", function()
   require("glossator-nvim").open_glossator()
 end, { desc = "Glossator: open pane" })
+
+vim.keymap.set("n", "<Plug>(GlossatorClose)", function()
+  require("glossator-nvim").close_glossator()
+end, { desc = "Glossator: close pane" })
