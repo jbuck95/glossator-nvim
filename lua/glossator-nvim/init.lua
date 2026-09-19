@@ -171,11 +171,12 @@ end
 
 -- ── 2. Highlight rendering ────────────────────────────────────────────────────
 
----Highlight all tags and annotations in the current buffer.
-function M.load_highlights()
+---Highlight all tags and annotations in the current buffer or specified buffer.
+---@param target_buf? integer
+function M.load_highlights(target_buf)
   set_highlights()
-  local bufnr = api.nvim_get_current_buf()
-  if not api.nvim_buf_is_valid(bufnr) then
+  local bufnr = target_buf or api.nvim_get_current_buf()
+  if not bufnr or not api.nvim_buf_is_valid(bufnr) then
     return
   end
 
@@ -224,69 +225,80 @@ function M.load_highlights()
     local tag_content = text:sub(os, oe)
     local cs, ce = text:find(tag_content, oe + 1, true)
 
-    if not cs then
-      break
-    end
+    if cs then
+      local function highlight_range(group)
+        local ol, oc = byte_to_pos(os)
+        local oel, oec = byte_to_pos(oe + 1)
+        local cl, cc = byte_to_pos(cs)
+        local cel, cec = byte_to_pos(ce + 1)
 
-    local function highlight_range(group)
-      local ol, oc = byte_to_pos(os)
-      local oel, oec = byte_to_pos(oe + 1)
-      local cl, cc = byte_to_pos(cs)
-      local cel, cec = byte_to_pos(ce + 1)
-
-      if oel == cl then
-        api.nvim_buf_set_extmark(bufnr, ns_toolbar, oel, oec, {
-          end_line = cl,
-          end_col = cc,
-          hl_group = group,
-          priority = 200,
-        })
-      else
-        api.nvim_buf_set_extmark(bufnr, ns_toolbar, oel, oec, {
-          end_line = oel,
-          end_col = #lines[oel + 1],
-          hl_group = group,
-          priority = 200,
-        })
-        for l = oel + 1, cl - 1 do
-          api.nvim_buf_set_extmark(bufnr, ns_toolbar, l, 0, {
-            end_line = l,
-            end_col = #lines[l + 1],
+        if oel == cl then
+          api.nvim_buf_set_extmark(bufnr, ns_toolbar, oel, oec, {
+            end_line = cl,
+            end_col = cc,
+            hl_group = group,
+            priority = 200,
+          })
+        else
+          api.nvim_buf_set_extmark(bufnr, ns_toolbar, oel, oec, {
+            end_line = oel,
+            end_col = #lines[oel + 1],
+            hl_group = group,
+            priority = 200,
+          })
+          for l = oel + 1, cl - 1 do
+            api.nvim_buf_set_extmark(bufnr, ns_toolbar, l, 0, {
+              end_line = l,
+              end_col = #lines[l + 1],
+              hl_group = group,
+              priority = 200,
+            })
+          end
+          api.nvim_buf_set_extmark(bufnr, ns_toolbar, cl, 0, {
+            end_line = cl,
+            end_col = cc,
             hl_group = group,
             priority = 200,
           })
         end
-        api.nvim_buf_set_extmark(bufnr, ns_toolbar, cl, 0, {
-          end_line = cl,
-          end_col = cc,
-          hl_group = group,
-          priority = 200,
+
+        api.nvim_buf_set_extmark(bufnr, ns_toolbar, ol, oc, {
+          end_line = oel,
+          end_col = oec,
+          conceal = "",
+          priority = 201,
+        })
+        api.nvim_buf_set_extmark(bufnr, ns_toolbar, cl, cc, {
+          end_line = cel,
+          end_col = cec,
+          conceal = "",
+          priority = 201,
         })
       end
 
-      api.nvim_buf_set_extmark(bufnr, ns_toolbar, ol, oc, {
-        end_line = oel,
-        end_col = oec,
-        conceal = "",
-        priority = 201,
-      })
-      api.nvim_buf_set_extmark(bufnr, ns_toolbar, cl, cc, {
-        end_line = cel,
-        end_col = cec,
-        conceal = "",
-        priority = 201,
-      })
-    end
-
-    if is_anno then
-      highlight_range("ETAnnotate")
-    else
-      local group = config.tag_to_group[tag_content]
-      if group then
-        highlight_range(group)
+      if is_anno then
+        highlight_range("ETAnnotate")
+      else
+        local group = config.tag_to_group[tag_content]
+        if group then
+          highlight_range(group)
+        end
       end
+      pos = ce + 1
+    else
+      -- Standalone / unclosed tag
+      if is_anno then
+        local ol, oc = byte_to_pos(os)
+        local oel, oec = byte_to_pos(oe + 1)
+        api.nvim_buf_set_extmark(bufnr, ns_toolbar, ol, oc, {
+          end_line = oel,
+          end_col = oec,
+          hl_group = "ETAnnotateID",
+          priority = 200,
+        })
+      end
+      pos = oe + 1
     end
-    pos = ce + 1
   end
 
   -- highlight comments
@@ -337,7 +349,9 @@ local function apply_tag(tag)
     ls[#ls] = ls[#ls]:sub(1, ec) .. tag .. ls[#ls]:sub(ec + 1)
     api.nvim_buf_set_lines(bufnr, sl - 1, el, false, ls)
   end
-  vim.defer_fn(M.load_highlights, 10)
+  vim.defer_fn(function()
+    M.load_highlights(bufnr)
+  end, 10)
 end
 
 local function get_next_id(bufnr)
@@ -404,7 +418,12 @@ local function apply_annotate()
         new_note_line,
       })
     end
-    vim.defer_fn(M.load_highlights, 10)
+    vim.defer_fn(function()
+      M.load_highlights(bufnr)
+      if cs_state.notes_buf and api.nvim_buf_is_valid(cs_state.notes_buf) then
+        M.load_highlights(cs_state.notes_buf)
+      end
+    end, 10)
   end)
 end
 
@@ -462,7 +481,9 @@ local function strip_all_marks()
       table.insert(new_lines, line)
     end
     api.nvim_buf_set_lines(bufnr, 0, -1, false, new_lines)
-    vim.defer_fn(M.load_highlights, 10)
+    vim.defer_fn(function()
+      M.load_highlights(bufnr)
+    end, 10)
   end)
 end
 
@@ -956,10 +977,13 @@ function M.open_glossator()
   vim.b[cs_state.notes_buf].is_glossator_notes = true
   api.nvim_buf_set_option(cs_state.notes_buf, "filetype", "markdown")
   api.nvim_win_set_option(cs_state.notes_win, "wrap", true)
+  api.nvim_win_set_option(cs_state.notes_win, "conceallevel", 2)
 
   copy_headers_to_notes()
   align_by_headers()
   adjust_length_on_edit()
+  M.load_highlights(cs_state.notes_buf)
+  M.load_highlights(cs_state.main_buf)
 
   local group = api.nvim_create_augroup("glossator_Session", { clear = true })
   api.nvim_create_autocmd("WinScrolled", { group = group, callback = sync_scroll })
@@ -1054,7 +1078,12 @@ local function init()
 
   vim.api.nvim_create_autocmd(
     { "BufWritePost", "TextChanged", "TextChangedI", "BufEnter", "InsertLeave" },
-    { pattern = "*.md", callback = M.load_highlights }
+    {
+      pattern = "*.md",
+      callback = function(args)
+        M.load_highlights(args.buf)
+      end,
+    }
   )
 end
 

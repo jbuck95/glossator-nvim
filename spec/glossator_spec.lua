@@ -56,6 +56,9 @@ describe("glossator-nvim", function()
     local temp_file
 
     before_each(function()
+      local m = require("glossator-nvim")
+      local defaults = require("glossator-nvim.config.defaults")
+      m.setup(defaults)
       temp_file = vim.fn.tempname() .. ".md"
       vim.cmd("edit " .. temp_file)
       vim.api.nvim_buf_set_lines(0, 0, -1, false, { "# Title", "Some content" })
@@ -142,6 +145,41 @@ describe("glossator-nvim", function()
         vim.cmd("wq")
       end)
       assert.are.equal(1, #vim.api.nvim_tabpage_list_wins(0))
+    end)
+
+    it("sets conceallevel=2 on notes_win and highlights tags in notes buffer", function()
+      local m = require("glossator-nvim")
+      m.open_glossator()
+      -- Switch to notes pane
+      m.open_glossator()
+      local notes_win = vim.api.nvim_get_current_win()
+      local notes_buf = vim.api.nvim_get_current_buf()
+
+      assert.are.equal(2, vim.wo[notes_win].conceallevel)
+
+      -- Put note with standalone [a1] and paired [hr]
+      vim.api.nvim_buf_set_lines(notes_buf, 0, -1, false, {
+        "[a1] ( ✐ note )",
+        "[hr]highlighted note text[hr]",
+      })
+      m.load_highlights(notes_buf)
+
+      local ns = vim.api.nvim_create_namespace("glossator")
+      local extmarks = vim.api.nvim_buf_get_extmarks(notes_buf, ns, 0, -1, { details = true })
+      assert.is_true(#extmarks > 0)
+
+      local has_annotate_id = false
+      local has_red_hl = false
+      for _, em in ipairs(extmarks) do
+        local details = em[4] or {}
+        if details.hl_group == "ETAnnotateID" then
+          has_annotate_id = true
+        elseif details.hl_group == "ETRed" then
+          has_red_hl = true
+        end
+      end
+      assert.is_true(has_annotate_id)
+      assert.is_true(has_red_hl)
     end)
   end)
 
