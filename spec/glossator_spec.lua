@@ -131,6 +131,18 @@ describe("glossator-nvim", function()
       vim.cmd("silent! bwipeout! " .. notes_file)
       vim.fn.delete(notes_file)
     end)
+
+    it("handles closing notes pane via :wq or :close without error", function()
+      local m = require("glossator-nvim")
+      m.open_glossator()
+      -- Switch to notes pane
+      m.open_glossator()
+      -- Close with :wq
+      assert.has.no.errors(function()
+        vim.cmd("wq")
+      end)
+      assert.are.equal(1, #vim.api.nvim_tabpage_list_wins(0))
+    end)
   end)
 
   describe("health check", function()

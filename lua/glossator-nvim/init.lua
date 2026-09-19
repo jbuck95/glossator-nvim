@@ -599,6 +599,9 @@ end
 -- ── 5. Glossator pane: sync logic ─────────────────────────────────────────────
 
 local function is_valid_sync_context()
+  if not cs_state.main_win or not cs_state.notes_win or not cs_state.main_buf or not cs_state.notes_buf then
+    return false
+  end
   local curr_win = api.nvim_get_current_win()
   local curr_buf = api.nvim_get_current_buf()
   if curr_win == cs_state.main_win and curr_buf == cs_state.main_buf then
@@ -611,7 +614,10 @@ local function is_valid_sync_context()
 end
 
 local function copy_headers_to_notes()
-  if not cs_state.notes_buf or not api.nvim_buf_is_valid(cs_state.notes_buf) then
+  if not cs_state.notes_buf or not cs_state.main_buf then
+    return
+  end
+  if not api.nvim_buf_is_valid(cs_state.notes_buf) or not api.nvim_buf_is_valid(cs_state.main_buf) then
     return
   end
 
@@ -640,7 +646,10 @@ local function copy_headers_to_notes()
 end
 
 local function align_by_headers()
-  if not cs_state.notes_buf or not api.nvim_buf_is_valid(cs_state.notes_buf) then
+  if not cs_state.notes_buf or not cs_state.main_buf then
+    return
+  end
+  if not api.nvim_buf_is_valid(cs_state.notes_buf) or not api.nvim_buf_is_valid(cs_state.main_buf) then
     return
   end
 
@@ -700,7 +709,10 @@ local function align_by_headers()
 end
 
 local function sync_notes_reorder()
-  if not cs_state.notes_buf or not api.nvim_buf_is_valid(cs_state.notes_buf) then
+  if not cs_state.notes_buf or not cs_state.main_buf then
+    return
+  end
+  if not api.nvim_buf_is_valid(cs_state.notes_buf) or not api.nvim_buf_is_valid(cs_state.main_buf) then
     return
   end
 
@@ -776,6 +788,12 @@ local function sync_cursor()
   if cs_state.syncing then
     return
   end
+  if not cs_state.main_win or not cs_state.notes_win then
+    return
+  end
+  if not api.nvim_win_is_valid(cs_state.main_win) or not api.nvim_win_is_valid(cs_state.notes_win) then
+    return
+  end
   if not is_valid_sync_context() then
     return
   end
@@ -797,6 +815,9 @@ local function sync_cursor()
 end
 
 local function sync_scroll()
+  if not cs_state.main_win or not cs_state.notes_win then
+    return
+  end
   if not api.nvim_win_is_valid(cs_state.main_win) or not api.nvim_win_is_valid(cs_state.notes_win) then
     return
   end
@@ -823,7 +844,10 @@ local function sync_scroll()
 end
 
 local function adjust_length_on_edit()
-  if cs_state.syncing or not api.nvim_buf_is_valid(cs_state.main_buf) then
+  if cs_state.syncing or not cs_state.main_buf or not cs_state.notes_buf then
+    return
+  end
+  if not api.nvim_buf_is_valid(cs_state.main_buf) or not api.nvim_buf_is_valid(cs_state.notes_buf) then
     return
   end
   if api.nvim_buf_get_lines(cs_state.notes_buf, 0, 1, false) == nil then
@@ -906,7 +930,9 @@ function M.open_glossator()
   end
 
   if cs_state.current_buf == current_buf
+    and cs_state.main_buf
     and api.nvim_buf_is_valid(cs_state.main_buf)
+    and cs_state.notes_win
     and api.nvim_win_is_valid(cs_state.notes_win) then
     api.nvim_set_current_win(cs_state.notes_win)
     return
@@ -962,7 +988,7 @@ function M.open_glossator()
     group = group,
     buffer = cs_state.main_buf,
     callback = function()
-      if api.nvim_buf_is_valid(cs_state.notes_buf) then
+      if cs_state.notes_buf and api.nvim_buf_is_valid(cs_state.notes_buf) then
         api.nvim_buf_call(cs_state.notes_buf, function()
           vim.cmd("write")
         end)
@@ -975,8 +1001,9 @@ function M.open_glossator()
     callback = function()
       local curr_win = api.nvim_get_current_win()
       if curr_win == cs_state.main_win
+        and cs_state.notes_win
         and api.nvim_win_is_valid(cs_state.notes_win) then
-        api.nvim_win_close(cs_state.notes_win, true)
+        pcall(api.nvim_win_close, cs_state.notes_win, true)
       end
     end,
   })
@@ -985,12 +1012,13 @@ function M.open_glossator()
     group = group,
     callback = function(args)
       local closed_win = tonumber(args.match)
-      if closed_win == cs_state.notes_win then
+      if closed_win == cs_state.notes_win or closed_win == cs_state.main_win then
         cs_state.notes_win = nil
         cs_state.notes_buf = nil
         cs_state.current_buf = nil
         cs_state.main_win = nil
         cs_state.main_buf = nil
+        pcall(api.nvim_del_augroup_by_name, "glossator_Session")
       end
     end,
   })
